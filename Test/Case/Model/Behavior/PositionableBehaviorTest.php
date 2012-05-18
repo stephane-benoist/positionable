@@ -4,7 +4,7 @@ App::import('Behavior', 'Positionable.Positionable');
 
 class MockPositionableBehavior extends PositionableBehavior {
 	public function _getModels() {
-		return array('PositionableElement', 'PositionableItem', 'ListElement');
+		return array('PositionableElement', 'PositionableItem', 'ListElement', 'PositionByItselfElement');
 	}
 }
 
@@ -15,12 +15,6 @@ class PositionableElement extends CakeTestModel {
 	);
 	public $alias = 'PositionableElement';
 	public $belongsTo = array('PositionableAssociated' => array('foreignKey' => 'foreign_model_id'));
-
-//	public function beforeSave($options = array()) {
-//		$this->Behaviors->trigger('beforeSave', array(&$this));
-//		return parent::beforeSave($options);
-//	}
-
 }
 
 class PositionableItem extends CakeTestModel {
@@ -37,6 +31,19 @@ class ListElement extends CakeTestModel {
 		'MockPositionable' => array('foreignKey' => 'list_id', 'model' => 'List')
 	);
 	public $alias = 'ListElement';
+}
+
+class PositionByItselfElement extends CakeTestModel {
+	public $useTable = 'list_elements';
+	public $actsAs = array(
+		'MockPositionable' => array('foreignKey' => 'list_id', 'model' => 'PositionByItselfElement'),
+	);
+	public $alias = 'PositionByItselfElement';
+
+	public function beforeValidate($options = array()) {
+		$this->data[$this->alias]['foreign_model_id'] = 'foreign-model-1';
+		return parent::beforeValidate($options);
+	}
 }
 
 class PositionableErrorMissingFKField extends CakeTestModel {
@@ -241,6 +248,15 @@ class PositionableBehaviorTest extends CakeTestCase {
 		$PositionableItem = $this->PositionableItem->findById('positionable-item-1');
 		$position = $PositionableItem['PositionableItem']['position'];
 		$this->assertEqual($position, 2);
+	}
+
+	public function testMoveWhenItselfPositioned() {
+		$PositionByItselfElement = ClassRegistry::init('PositionByItselfElement');
+
+		$PositionByItselfElement->move('list-element-1', 2);
+		$element = $PositionByItselfElement->findById('list-element-1');
+
+		$this->assertEqual($element['PositionByItselfElement']['position'], 2);
 	}
 
 /**

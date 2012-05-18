@@ -43,6 +43,22 @@ We want to display elements of a competition in order, we just have to do that :
 	$competitionElements = array_merge($matches, $rests);
 	$sortedCompetitionElements = $this->Match->sortByPosition($competitionElements);
 
+To position a competition in absolute way (without foreign model) you have to do:
+
+	class Competition extends AppModel {
+		public $actsAs = array(
+			'MockPositionable' => array(
+				'foreignKey' => 'positionable_foreign_key', //An attribute that will have a single value
+				'model' => 'CompetitionItself' //A not used alias
+			)
+		);
+
+		public function beforeValidate($options = array()) {
+			$this->data[$this->alias]['positionable_foreign_key'] = 'unique-value';
+			return parent::beforeValidate($options);
+		}
+	}
+
 ## Model Requirement ##
 
 For using this behavior a model MUST have a 'position' field and the settings defined foreign key field.

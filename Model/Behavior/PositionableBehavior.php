@@ -164,8 +164,12 @@ class PositionableBehavior extends ModelBehavior {
 			}
 		}
 
-		$Model->id = $element[$Model->alias]['id'];
-		$success = $success && $Model->saveField('position', $to);
+		$element[$Model->alias]['position'] = $to;
+		$success = $success && $Model->save(
+			$element,
+			array('validate' => false, 'callbacks' => false),
+			array('position')
+		);
 		return $success;
 	}
 
