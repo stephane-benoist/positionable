@@ -189,7 +189,8 @@ class PositionableBehavior extends ModelBehavior {
 			$Model->data[$Model->alias] = $Model->data;
 		}
 
-		if (empty($Model->data[$Model->alias][$key])) {
+		//@Todo test me in the case of empty($Model->{$association})
+		if (empty($Model->data[$Model->alias][$key]) && !empty($Model->{$association})) {
 			if (isset($Model->data[$Model->alias])) {
 				$Model->data[$Model->alias][$key] = $Model->{$association}->id;
 			} else {
