@@ -93,17 +93,15 @@ class PositionableBehavior extends ModelBehavior {
 		if (isset($Model->data[$Model->alias][$foreignKey])) {
 			$models = $this->_getPositionedModels($Model);
 
-			$conditions = array(
-				$foreignKey => $Model->data[$Model->alias][$foreignKey],
-				'position' => $Model->data[$Model->alias]['position'],
-			);
-
-			$aliasCondition = $conditions;
-			if (!empty($Model->data[$Model->alias]['id'])) {
-				$aliasCondition['NOT'] = array($Model->alias . '.id' => $Model->data[$Model->alias]['id']);
-			}
-
 			foreach($models as $_BehaviorModel) {
+				$conditions = array(
+					$_BehaviorModel->alias . '.' .  $foreignKey => $Model->data[$Model->alias][$foreignKey],
+					$_BehaviorModel->alias . '.' .  'position' => $Model->data[$Model->alias]['position'],
+				);
+				$aliasCondition = $conditions;
+				if (!empty($Model->data[$Model->alias]['id'])) {
+					$aliasCondition['NOT'] = array($Model->alias . '.id' => $Model->data[$Model->alias]['id']);
+				}
 				if ($_BehaviorModel->alias == $Model->alias) {
 					$matches += $_BehaviorModel->find('count', array('conditions' => $aliasCondition));
 				} else {
