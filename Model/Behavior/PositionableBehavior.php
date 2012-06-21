@@ -196,7 +196,7 @@ class PositionableBehavior extends ModelBehavior {
 			}
 		}
 
-		if (empty($Model->data[$Model->alias]['position']) && !isset($Model->data[$Model->alias][$Model->primaryKey])) {
+		if (empty($Model->data[$Model->alias]['position'])) {
 			$maxPosition = $this->_getMaxPosition($Model);
 			$data = $Model->data;
 			if (!empty($Model->data[$Model->alias][$Model->primaryKey])) {
