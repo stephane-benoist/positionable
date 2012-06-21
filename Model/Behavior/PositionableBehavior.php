@@ -198,10 +198,12 @@ class PositionableBehavior extends ModelBehavior {
 
 		if (empty($Model->data[$Model->alias]['position'])) {
 			$maxPosition = $this->_getMaxPosition($Model);
+			$data = $Model->data;
 			if (!empty($Model->data[$Model->alias][$Model->primaryKey])) {
 				$this->move($Model, $Model->data[$Model->alias][$Model->primaryKey], $maxPosition);
 			}
-			$Model->data[$Model->alias]['position'] = $maxPosition;
+			$data[$Model->alias]['position'] = $maxPosition;
+			$Model->data = $data;
 		}
 
 		return parent::beforeSave($Model);

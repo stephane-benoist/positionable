@@ -346,6 +346,25 @@ class PositionableBehaviorTest extends CakeTestCase {
 	}
 
 /**
+* Test data alteration of behavior
+**/
+	public function testDataModifiedByBeforeSave() {
+		$this->PositionableItem->save(array(
+			'id' => 'positionable-item-1',
+			'content' => 'Hello !',
+			'position' => 2
+		));
+		$result = $this->PositionableItem->find('first');
+
+		$this->assertEqual($result['PositionableItem'], array(
+			'id' => 'positionable-item-1',
+			'foreign_model_id' => 'foreign-model-1',
+			'content'  => 'Hello !',
+			'position' => 2
+		));
+	}
+
+/**
  * Asserts that data are valid given Model validation rules
  * Calls the Model::validate() method and asserts the result
  *
