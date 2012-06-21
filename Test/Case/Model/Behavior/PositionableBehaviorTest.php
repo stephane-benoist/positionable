@@ -352,7 +352,7 @@ class PositionableBehaviorTest extends CakeTestCase {
 		$this->PositionableItem->save(array(
 			'id' => 'positionable-item-1',
 			'content' => 'Hello !',
-			'position' => 3
+			'position' => 2
 		));
 		$result = $this->PositionableItem->find('first');
 
@@ -360,7 +360,7 @@ class PositionableBehaviorTest extends CakeTestCase {
 			'id' => 'positionable-item-1',
 			'foreign_model_id' => 'foreign-model-1',
 			'content'  => 'Hello !',
-			'position' => 3
+			'position' => 2
 		));
 	}
 
