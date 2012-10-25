@@ -1,9 +1,10 @@
 <?php
+
 /**
  * Class allowing to deal with positioned element in a (potentially differant) model
  *
  * Elements has to have following fields :
- *	- foreign key given in settings;
+ * 	- foreign key given in settings;
  *  - 'position'.
  */
 class PositionableBehavior extends ModelBehavior {
@@ -80,7 +81,7 @@ class PositionableBehavior extends ModelBehavior {
 	}
 
 /**
- * Validation rule - checks if the position is not already set for this truck.
+ * Validation rule - checks if the position is not already set for this foreign key.
  *
  * @param Model $Model Model using the behavior
  * @param array $check Data to check
@@ -93,10 +94,10 @@ class PositionableBehavior extends ModelBehavior {
 		if (isset($Model->data[$Model->alias][$foreignKey])) {
 			$models = $this->_getPositionedModels($Model);
 
-			foreach($models as $_BehaviorModel) {
+			foreach ($models as $_BehaviorModel) {
 				$conditions = array(
-					$_BehaviorModel->alias . '.' .  $foreignKey => $Model->data[$Model->alias][$foreignKey],
-					$_BehaviorModel->alias . '.' .  'position' => $Model->data[$Model->alias]['position'],
+					$_BehaviorModel->alias . '.' . $foreignKey => $Model->data[$Model->alias][$foreignKey],
+					$_BehaviorModel->alias . '.' . 'position' => $Model->data[$Model->alias]['position'],
 				);
 				$aliasCondition = $conditions;
 				if (!empty($Model->data[$Model->alias]['id'])) {
@@ -128,7 +129,7 @@ class PositionableBehavior extends ModelBehavior {
 		$element = $Model->find('first', array(
 			'conditions' => array($Model->alias . '.id' => $elementId),
 			'contain' => array()
-		));
+				));
 
 		if (empty($element)) {
 			throw new NotFoundException(__d('positionable', 'Invalid Element', true));
@@ -143,7 +144,7 @@ class PositionableBehavior extends ModelBehavior {
 			$foreignKey = $this->settings[$Model->alias]['foreignKey'];
 			$conditions[$_BehaviorModel->alias . '.' . $foreignKey] = $element[$Model->alias][$foreignKey];
 
-			if($from < $to) {
+			if ($from < $to) {
 				$conditions[$_BehaviorModel->alias . '.position BETWEEN ? AND ? '] = array($from + 1, $to);
 				$success = $success && $_BehaviorModel->updateAll(
 					array(
@@ -163,11 +164,8 @@ class PositionableBehavior extends ModelBehavior {
 		}
 
 		$element[$Model->alias]['position'] = $to;
-		$success = $success && $Model->save(
-			$element,
-			array('validate' => false, 'callbacks' => false),
-			array('position')
-		);
+		$saveOptions = array('validate' => false, 'callbacks' => false);
+		$success = $success && $Model->save($element, $saveOptions, array('position'));
 		return $success;
 	}
 
@@ -211,7 +209,7 @@ class PositionableBehavior extends ModelBehavior {
 
 /**
  * Called before every deletion operation.
- *	- Save the position of the deleted element in __save
+ * 	- Save the position of the deleted element in __save
  *
  * @param Model $Model Model using the behavior
  * @param boolean $cascade If true records that depend on this record will also be deleted
@@ -224,7 +222,7 @@ class PositionableBehavior extends ModelBehavior {
 
 /**
  * Called after every deletion operation.
- *	- Update the position in trucks
+ * 	- Update the position for the foreign key
  *
  * @param Model $Model Model using the behavior
  * @return void.
@@ -233,13 +231,12 @@ class PositionableBehavior extends ModelBehavior {
 		$models = $this->_getPositionedModels($Model);
 		$foreignKey = $this->settings[$Model->alias]['foreignKey'];
 		foreach ($models as $_BehaviorModel) {
+			$alias = $_BehaviorModel->alias;
 			$_BehaviorModel->updateAll(
-				array($_BehaviorModel->alias . '.position' => '(' . $_BehaviorModel->alias . '.position -1)'),
+				array($alias . '.position' => '(' . $alias . '.position -1)'),
 				array(
-					$_BehaviorModel->alias . '.' . $foreignKey =>
-						$this->__save[$Model->alias][$Model->alias][$foreignKey],
-					$_BehaviorModel->alias . '.position >' =>
-						$this->__save[$Model->alias][$Model->alias]['position']
+					$alias . '.' . $foreignKey => $this->__save[$Model->alias][$Model->alias][$foreignKey],
+					$alias . '.position >' => $this->__save[$Model->alias][$Model->alias]['position']
 				)
 			);
 		}
@@ -248,7 +245,7 @@ class PositionableBehavior extends ModelBehavior {
 	}
 
 /**
- * Sort an array of truck positioned element by position.
+ * Sort an array of positionable element by position.
  * Modify the array.
  *
  * @param Model $Model Model using the behavior
@@ -292,7 +289,7 @@ class PositionableBehavior extends ModelBehavior {
 
 /**
  * Check if all needed informations are in settings
- *	- Check if foreignKey is in settings
+ * 	- Check if foreignKey is in settings
  *
  * @return boolean True if the settings are correct, false otherwise
  */
@@ -301,7 +298,7 @@ class PositionableBehavior extends ModelBehavior {
 		foreach (array('foreignKey', 'model') as $mandatorySettings) {
 			$settingsGiven = array_key_exists($mandatorySettings, $settings) &&
 				!empty($settings[$mandatorySettings]);
-			if(!$settingsGiven) {
+			if (!$settingsGiven) {
 				trigger_error(__d('positionable', 'The foreignKey settings as to be set'));
 			}
 			$correct = $correct && $settingsGiven;
@@ -328,7 +325,7 @@ class PositionableBehavior extends ModelBehavior {
 				'message' => __d('positionable', 'The position has to be unique per foreign key.'),
 			),
 		);
-		if (empty ($Model->validate['position'])) {
+		if (empty($Model->validate['position'])) {
 			$Model->validate['position'] = $postionRules;
 		} else {
 			$Model->validate['position'] = array_merge_recursive(
@@ -339,7 +336,7 @@ class PositionableBehavior extends ModelBehavior {
 	}
 
 /**
- * Return a list of all application models acting as truck positioned behavior
+ * Return a list of all application models acting as positionable behavior
  *
  * @param Model $Model Model using the behavior
  * @return array List of models
@@ -351,7 +348,7 @@ class PositionableBehavior extends ModelBehavior {
 			foreach ($models as $modelName) {
 				$TempModel = ClassRegistry::init($modelName);
 				if (isset($TempModel->Behaviors) && is_a($TempModel->Behaviors, 'BehaviorCollection')) {
-					if($this->_isPositionableOn($TempModel, $foreignModel)) {
+					if ($this->_isPositionableOn($TempModel, $foreignModel)) {
 						$this->_Models[$foreignModel][] = $TempModel;
 					}
 				}
@@ -372,12 +369,10 @@ class PositionableBehavior extends ModelBehavior {
 		if (!empty($Model->data[$Model->alias][$foreignKey])) {
 			$models = $this->_getPositionedModels($Model);
 			foreach ($models as $_BehaviorModel) {
+				$alias = $_BehaviorModel->alias;
 				$position = $_BehaviorModel->field(
-					'max(' . $_BehaviorModel->alias . '.position) as max',
-					array(
-						$_BehaviorModel->alias . '.' . $foreignKey =>
-							$Model->data[$Model->alias][$foreignKey]
-					)
+					'max(' . $alias . '.position) as max',
+					array($alias . '.' . $foreignKey => $Model->data[$Model->alias][$foreignKey])
 				);
 
 				if (!empty($Model->data[$Model->alias][$Model->primaryKey])) {
@@ -421,7 +416,7 @@ class PositionableBehavior extends ModelBehavior {
  * @param AttributedOrder $b The second element to be compared
  * @return int
  */
-	private static function __positionComparison ($a, $b){
+	private static function __positionComparison($a, $b) {
 		if (!isset($a['position'])) {
 			$alias = array_keys($a);
 			$alias = $alias[0];
