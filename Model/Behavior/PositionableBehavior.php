@@ -260,6 +260,36 @@ class PositionableBehavior extends ModelBehavior {
 		return $elements;
 	}
 
+	public function repairPositionning(Model &$Model, $foreignKeys = '\n') { //'\n' is an arbitrary value which is an improbable foreign key value
+		$foreignKeyField = $this->settings[$Model->alias]['foreignKey'];
+		$PositionnedModels = $this->_getPositionedModels($Model);
+
+		if ($foreignKeys === '\n') {
+			$foreignKeys = $this->_getDistinctForeignKeys($PositionnedModels, $foreignKeyField);
+		}
+		$foreignKeys = (array)$foreignKeys;
+		$foreignKeys = array_unique($foreignKeys);
+
+		$recordsToSave = array();
+		foreach ($foreignKeys as $foreignKey) {
+			$records = $this->_getRecordsForForeignKey($PositionnedModels, $foreignKeyField, $foreignKey);
+
+			$recordsToSave = array_merge_recursive(
+				$recordsToSave,
+				$this->_getPositionRepairedRecords($PositionnedModels, $records)
+			);
+		}
+		return $this->_savePositionRepairedRecords($PositionnedModels, $recordsToSave);
+	}
+
+	public function unsetPosition(Model $Model, $records) {
+		foreach ($records as &$record) {
+			$record['position'] = 0;
+		}
+		$save = $Model->saveMany($records, array('validate' => false, 'callbacks' => false));
+		return $save;
+	}
+
 /**
  * Check if all needed informations are in settings
  *	- Check if foreignKey is in settings
@@ -401,5 +431,69 @@ class PositionableBehavior extends ModelBehavior {
 			$b = $b[$alias];
 		}
 		return ($a['position'] < $b['position']) ? -1 : 1;
+	}
+
+	protected function _getDistinctForeignKeys($Models, $foreignKeyField) {
+		$foreignKeys = array();
+		foreach ($Models as $Model) {
+			$records = $Model->find('all', array(
+				'fields' => $foreignKeyField
+			));
+
+			$foreignKeys = array_merge(
+				$foreignKeys,
+				(array)Hash::extract($records, '{n}.' . $Model->alias . '.' .$foreignKeyField)
+			);
+		}
+		return $foreignKeys;
+	}
+
+	protected function _getRecordsForForeignKey($Models, $foreignKeyField, $foreignKeyValue) {
+		$records = array();
+		foreach ($Models as $Model) {
+			$records = array_merge($records, $Model->find('all', array(
+				'conditions' => array(
+					$Model->escapeField($foreignKeyField) => $foreignKeyValue,
+					'NOT' => array(
+						$Model->escapeField('position') => 0
+					)
+				),
+				'recursive' => -1
+			)));
+		}
+		return $Model->sortByPosition($records);
+	}
+
+	protected function _getPositionRepairedRecords($Models, $records) {
+		$repositionnedRecords = array();
+		$modelAliases = Hash::extract($Models, '{n}.alias');
+		for ($position = 0; $position < count($records); $position++) {
+			foreach ($records[$position] as $modelAlias => $modelData) {
+				if (in_array($modelAlias, $modelAliases)) {
+					$modelData['position'] = $position + 1;
+					if (!array_key_exists($modelAlias, $repositionnedRecords)) {
+						$repositionnedRecords[$modelAlias] = array();
+					}
+					$repositionnedRecords[$modelAlias][] = $modelData;
+				}
+			}
+		}
+		return $repositionnedRecords;
+	}
+
+	protected function _savePositionRepairedRecords($Models, $recordsToSave) {
+		$success = true;
+		foreach (array('unsetPosition', 'saveMany') as $callback) {
+			foreach ($Models as $Model) {
+				if (!empty($recordsToSave[$Model->alias])) {
+					$records = $recordsToSave[$Model->alias];
+					if ($callback == 'saveMany') {
+						$Model->validateMany($records);
+					}
+					$success = $success && $Model->{$callback}($records, array('callbacks' => false, 'validate' => false));
+				}
+			}
+		}
+		return $success;
 	}
 }

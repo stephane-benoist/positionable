@@ -14,6 +14,7 @@ class PositionableElement extends CakeTestModel {
 		'MockPositionable' => array('foreignKey' => 'foreign_model_id', 'model' => 'PositionableAssociated'),
 	);
 	public $alias = 'PositionableElement';
+	public $recursive = -1;
 	public $belongsTo = array('PositionableAssociated' => array('foreignKey' => 'foreign_model_id'));
 }
 
@@ -23,6 +24,7 @@ class PositionableItem extends CakeTestModel {
 		'MockPositionable' => array('foreignKey' => 'foreign_model_id', 'model' => 'PositionableAssociated')
 	);
 	public $alias = 'PositionableItem';
+	public $recursive = -1;
 }
 
 class ListElement extends CakeTestModel {
@@ -346,8 +348,8 @@ class PositionableBehaviorTest extends CakeTestCase {
 	}
 
 /**
-* Test data alteration of behavior
-**/
+ * Test data alteration of behavior
+ **/
 	public function testDataModifiedByBeforeSave() {
 		$this->PositionableItem->save(array(
 			'id' => 'positionable-item-1',
@@ -362,6 +364,86 @@ class PositionableBehaviorTest extends CakeTestCase {
 			'content'  => 'Hello !',
 			'position' => 2
 		));
+	}
+
+/**
+ * Test repairPositionning method
+ */
+	public function testRepairPositionning() {
+		$update = $this->PositionableElement->updateAll(array('position' => 4));
+		$positionnablesBefore = $this->_getPositionned('foreign-model-1');
+		$positionnablesBeforePosition = Hash::extract($positionnablesBefore, '{n}.{s}.position');
+		$positionnablesBeforeId = Hash::extract($positionnablesBefore, '{n}.{s}.id');
+
+		$repair = $this->PositionableElement->repairPositionning('foreign-model-1');
+
+		$positionnablesAfter = $this->_getPositionned('foreign-model-1');
+		$positionnablesAfterPosition = Hash::extract($positionnablesAfter, '{n}.{s}.position');
+		$positionnablesAfterId = Hash::extract($positionnablesAfter, '{n}.{s}.id');
+		$expectedBefore = array(3, 4, 4);
+		$expectedAfter = array(1, 2, 3);
+
+		$this->assertTrue($update, 'Update is not successful');
+		$this->assertTrue($repair, 'Repair is not successful');
+		$this->assertEquals($positionnablesBeforeId, $positionnablesAfterId, 'The order is not kept');
+		$this->assertEquals($expectedBefore, $positionnablesBeforePosition, 'The position before repair is not as expected');
+		$this->assertEquals($expectedAfter, $positionnablesAfterPosition, 'The position after repair is not as expected');
+	}
+
+	public function testRepairPositionningWithoutForeignKey() {
+		$this->PositionableElement->id = 'positionable-element-2';
+		$update = $this->PositionableElement->saveField('foreign_model_id', 'foreign-model-2');
+
+		$repair = $this->PositionableElement->repairPositionning();
+
+		$positionnablesFK1 = $this->_getPositionned('foreign-model-1');
+		$positionnablesFK1Position = Hash::extract($positionnablesFK1, '{n}.{s}.position');
+		$positionnablesFK2 = $this->_getPositionned('foreign-model-2');
+		$positionnablesFK2Position = Hash::extract($positionnablesFK2, '{n}.{s}.position');
+		$expectedFK1 = array('1', '2');
+		$expectedFK2 = array('1');
+
+		$this->assertNotEmpty($update, 'Update is not successful');
+		$this->assertTrue($repair, 'Repair is not successful');
+		$this->assertEquals($expectedFK1, $positionnablesFK1Position, 'The position after repair for foreign-model-1 is not as expected');
+		$this->assertEquals($expectedFK2, $positionnablesFK2Position, 'The position after repair for foreign-model-2 is not as expected');
+	}
+
+	public function testRepairPositionningWith0AsPosition() {
+		$update = $this->PositionableElement->updateAll(array('position' => 0));
+
+		$repair = $this->PositionableElement->repairPositionning();
+
+		$positionnables = $this->_getPositionned('foreign-model-1');
+		$positionnablesPosition = Hash::extract($positionnables, '{n}.{s}.position');
+		$expected = array(0, 0, 1);
+
+		$this->assertNotEmpty($update, 'Update is not successful');
+		$this->assertTrue($repair, 'Repair is not successful');
+		$this->assertEquals($expected, $positionnablesPosition, 'The position after repair for foreign-model-1 is not as expected');
+	}
+
+	public function testRepairPositionningWithNullAsForeignKey() {
+		$update = $this->PositionableElement->updateAll(array('foreign_model_id' => null));
+		$update = $update && $this->PositionableElement->updateAll(array('position' => 4));
+
+		$repair = $this->PositionableElement->repairPositionning();
+
+		$positionnables = $this->_getPositionned(null);
+		$positionnablesPosition = Hash::extract($positionnables, '{n}.{s}.position');
+		$expected = array(1, 2);
+
+		$this->assertNotEmpty($update, 'Update is not successful');
+		$this->assertTrue($repair, 'Repair is not successful');
+		$this->assertEquals($expected, $positionnablesPosition, 'The position after repair for foreign-model-1 is not as expected');
+	}
+
+	public function _getPositionned($foreignKey) {
+		$options = array('conditions' => array('foreign_model_id' => $foreignKey));
+		$elements = $this->PositionableElement->find('all', $options);
+
+		$items = $this->PositionableItem->find('all', $options);
+		return $this->PositionableItem->sortByPosition(array_merge($elements, $items));
 	}
 
 /**
